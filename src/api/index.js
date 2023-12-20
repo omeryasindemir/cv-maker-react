@@ -1,12 +1,16 @@
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   doc,
   onSnapshot,
   orderBy,
   query,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase.config";
+import { toast } from "react-toastify";
 
 export const getUserDetail = () => {
   return new Promise((resolve, reject) => {
@@ -46,17 +50,69 @@ export const getTemplates = () => {
 
     const unsubscribe = onSnapshot(templateQuery, (querySnap) => {
       const templates = querySnap.docs.map((doc) => doc.data());
-      resolve(templates)
-
-      
+      resolve(templates);
     });
 
     return unsubscribe;
   });
+};
 
-  
+export const saveToCollections = async (user, data) => {
+  if (!user?.collection?.includes(data?._id)) {
+    const docRef = doc(db, "users", user?.uid);
+
+    await updateDoc(docRef, {
+      collection: arrayUnion(data?._id),
+    })
+      .then(() => toast.success("Saved To Collections :)"))
+      .catch((err) => {
+        toast.error(`Error : ${err.message}`);
+      });
+  }else{
+    const docRef = doc(db, "users", user?.uid);
+
+    await updateDoc(docRef, {
+      collection: arrayRemove(data?._id),
+    })
+      .then(() => toast.success("Removed From Collections :/"))
+      .catch((err) => {
+        toast.error(`Error : ${err.message}`);
+      });
+  }
+};
+
+export const saveToFavourites = async (user, data) => {
+  if (!data?.favourites?.includes(user?.uid)) {
+    const docRef = doc(db, "templates", data?._id);
+
+    await updateDoc(docRef, {
+      favourites: arrayUnion(user?.uid),
+    })
+      .then(() => toast.success("Saved To Favourites :)"))
+      .catch((err) => {
+        toast.error(`Error : ${err.message}`);
+      });
+  }else{
+    const docRef = doc(db, "templates", data?._id);
+
+    await updateDoc(docRef, {
+      favourites: arrayRemove(user?.uid),
+    })
+      .then(() => toast.success("Removed From Favourites :/"))
+      .catch((err) => {
+        toast.error(`Error : ${err.message}`);
+      });
+  }
 };
 
 
 
+export const getTemplateDetails = async (templateId) => {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onSnapshot(doc(db, "templates", templateId), (doc) => {
+      resolve(doc.data())
+    })
 
+    return unsubscribe;
+  })
+}
